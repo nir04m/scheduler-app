@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { participantResponseSchema, updateParticipantResponseSchema } from "../schemas/participant.schema";
 import { createParticipantResponse, updateParticipantResponse } from "../services/participants.service";
+import { logError } from "../utils/logger";
 
 export async function createParticipantResponseController(
   req: Request,
@@ -33,7 +34,7 @@ export async function createParticipantResponseController(
 
     return res.status(201).json(participant);
   } catch (error) {
-    console.error(error);
+    logError("Failed to create participant response");
 
     if (error instanceof Error) {
       if (error.message === "POLL_NOT_FOUND") {
@@ -100,7 +101,7 @@ export async function updateParticipantResponseController(
   
       return res.status(200).json(participant);
     } catch (error) {
-      console.error(error);
+     logError("Failed to update participant response");
   
       if (error instanceof Error) {
         if (error.message === "PARTICIPANT_NOT_FOUND") {

@@ -1,6 +1,9 @@
+
 import type {
       ErrorRequestHandler,
     } from "express";
+
+    import { logError } from "../utils/logger";
     
     export const errorHandler: ErrorRequestHandler = (
       error,
@@ -8,7 +11,7 @@ import type {
       res,
       _next
     ) => {
-      console.error(error);
+      logError("unhandled request error", error);
     
       if (
         error instanceof SyntaxError &&

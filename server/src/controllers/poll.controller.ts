@@ -2,6 +2,7 @@ import type { Request, Response } from "express";
 import { createPoll, getPollByPublicId, updatePoll, finalizePoll } from "../services/poll.service";
 import { createPollSchema, updatePollSchema, finalizePollSchema} from "../schemas/poll.schema";
 import { z } from "zod"
+import { logError } from "../utils/logger";
 
 export async function createPollController(
     req: Request,
@@ -21,7 +22,7 @@ export async function createPollController(
 
         return res.status(201).json(poll);
     } catch (error) {
-        console.error(error);
+        logError("Failed to create poll");
 
         res.status(500).json({
             message: "Failed to create poll",
@@ -45,7 +46,7 @@ export async function getPollController(
 
         res.status(200).json(poll);
     } catch (error) {
-        console.error(error);
+        logError("Failed to get poll");
 
         res.status(500).json({
             message: "Failed to get poll",
@@ -95,7 +96,7 @@ export async function updatePollController(
             
             return res.status(200).json(poll);
         } catch (error) {
-            console.error(error);
+            logError("Faile to update poll");
             
             if (error instanceof Error) {
                 if (error.message === "POLL_NOT_FOUND") {
@@ -165,7 +166,7 @@ export async function finalizePollController(
 
     return res.status(200).json(poll);
   } catch (error) {
-    console.error(error);
+    logError("Failed to finalize poll");
 
     if (error instanceof Error) {
       if (error.message === "POLL_NOT_FOUND") {

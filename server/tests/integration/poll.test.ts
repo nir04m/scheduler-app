@@ -1,6 +1,7 @@
 import request from "supertest";
 import app from "../../src/app";
 import prisma from "../../src/libs/prisma";
+import { parseParticipantToken, verifyToken } from "../../src/utils/token";
 
 describe("Poll API", () => {
   beforeEach(async () => {
@@ -145,6 +146,124 @@ describe("Rate limiting", () => {
         );
       });
 });
+
+describe("Token storage security", () => {
+          it("stores the organizer token as a hash instead of plaintext", async () => {
+            const response = await request(app)
+              .post("/api/polls")
+              .send({
+                title: "Organizer Token Hash Test",
+                timezone: "America/Edmonton",
+                options: [
+                  {
+                    startTime: "2026-10-25T16:00:00.000Z",
+                    endTime: "2026-10-25T16:30:00.000Z",
+                  },
+                ],
+              })
+              .expect(201);
+        
+            const rawOrganizerToken =
+              response.body.organizerToken;
+        
+            const storedPoll = await prisma.poll.findUnique({
+              where: {
+                publicId: response.body.publicId,
+              },
+            });
+        
+            expect(storedPoll).not.toBeNull();
+        
+            expect(storedPoll!.organizerToken).not.toBe(
+              rawOrganizerToken
+            );
+        
+            const tokenMatches = await verifyToken(
+              rawOrganizerToken,
+              storedPoll!.organizerToken
+            );
+        
+            expect(tokenMatches).toBe(true);
+          });
+        
+          it("stores only the participant token selector and hashed secret", async () => {
+            const poll = await request(app)
+              .post("/api/polls")
+              .send({
+                title: "Participant Token Hash Test",
+                timezone: "America/Edmonton",
+                options: [
+                  {
+                    startTime: "2026-10-26T16:00:00.000Z",
+                    endTime: "2026-10-26T16:30:00.000Z",
+                  },
+                ],
+              })
+              .expect(201);
+        
+            const participantResponse = await request(app)
+              .post(`/api/polls/${poll.body.publicId}/responses`)
+              .send({
+                name: "Security Tester",
+                responses: [
+                  {
+                    timeOptionId: poll.body.timeOptions[0].id,
+                    status: "AVAILABLE",
+                  },
+                ],
+              })
+              .expect(201);
+        
+            const rawResponseToken =
+              participantResponse.body.responseToken;
+        
+            const parsedToken =
+              parseParticipantToken(rawResponseToken);
+        
+            expect(parsedToken).not.toBeNull();
+        
+            const storedParticipant =
+              await prisma.participant.findUnique({
+                where: {
+                  responseTokenId: parsedToken!.tokenId,
+                },
+              });
+        
+            expect(storedParticipant).not.toBeNull();
+        
+            // Selector may be stored because it is only used for lookup.
+            expect(storedParticipant!.responseTokenId).toBe(
+              parsedToken!.tokenId
+            );
+        
+            // Secret itself must never be stored.
+            expect(
+              storedParticipant!.responseTokenHash
+            ).not.toBe(parsedToken!.secret);
+        
+            expect(
+              storedParticipant!.responseTokenHash
+            ).not.toContain(parsedToken!.secret);
+
+            expect(
+                storedParticipant!.responseTokenHash
+            ).not.toBeNull();
+        
+            const responseTokenHash = 
+                storedParticipant!.responseTokenHash;
+            if (!responseTokenHash) {
+                throw new Error(
+                        "Expected participant response token hash to exist"
+                );
+            }
+            const secretMatches = await verifyToken(
+              parsedToken!.secret,
+              responseTokenHash
+            );
+        
+            expect(secretMatches).toBe(true);
+          });
+        });
 
 describe("POST /api/polls", () => {
     it("creates a poll", async () => {
@@ -747,5 +866,90 @@ describe("Poll validation", () => {
           });
 });
 
+describe("Sensitive data exposure", () => {
+          it("does not expose organizer credentials in the public poll response", async () => {
+            const created = await request(app)
+              .post("/api/polls")
+              .send({
+                title: "Public Security Test",
+                timezone: "America/Edmonton",
+                options: [
+                  {
+                    startTime: "2026-11-01T16:00:00.000Z",
+                    endTime: "2026-11-01T16:30:00.000Z",
+                  },
+                ],
+              })
+              .expect(201);
+        
+            const publicResponse = await request(app)
+              .get(`/api/polls/${created.body.publicId}`)
+              .expect(200);
+        
+            expect(publicResponse.body).not.toHaveProperty(
+              "organizerToken"
+            );
+        
+            expect(
+              JSON.stringify(publicResponse.body)
+            ).not.toContain(created.body.organizerToken);
+          });
+        
+          it("does not expose participant token fields in the public poll response", async () => {
+            const created = await request(app)
+              .post("/api/polls")
+              .send({
+                title: "Participant Security Test",
+                timezone: "America/Edmonton",
+                options: [
+                  {
+                    startTime: "2026-11-02T16:00:00.000Z",
+                    endTime: "2026-11-02T16:30:00.000Z",
+                  },
+                ],
+              })
+              .expect(201);
+        
+            const participant = await request(app)
+              .post(
+                `/api/polls/${created.body.publicId}/responses`
+              )
+              .send({
+                name: "Security Tester",
+                responses: [
+                  {
+                    timeOptionId:
+                      created.body.timeOptions[0].id,
+                    status: "AVAILABLE",
+                  },
+                ],
+              })
+              .expect(201);
+        
+            const publicResponse = await request(app)
+              .get(`/api/polls/${created.body.publicId}`)
+              .expect(200);
+        
+            const serialized = JSON.stringify(
+              publicResponse.body
+            );
+        
+            expect(serialized).not.toContain(
+              "responseToken"
+            );
+        
+            expect(serialized).not.toContain(
+              "responseTokenId"
+            );
+        
+            expect(serialized).not.toContain(
+              "responseTokenHash"
+            );
+        
+            expect(serialized).not.toContain(
+              participant.body.responseToken
+            );
+          });
+});
 
 });

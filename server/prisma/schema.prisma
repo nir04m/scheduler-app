@@ -58,10 +58,6 @@ model Participant {
   pollId Int
   name   String
 
-  // Temporary legacy token.
-  // Remove after existing participants are migrated.
-  responseToken String? @unique
-
   // New secure participant token fields.
   responseTokenId   String? @unique
   responseTokenHash String?

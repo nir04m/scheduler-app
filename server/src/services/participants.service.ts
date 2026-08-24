@@ -1,9 +1,9 @@
-import prisma from "../libs/prisma.js";
+import prisma from "../libs/prisma";
 import {
   createParticipantToken,
   parseParticipantToken,
   verifyToken,
-} from "../utils/token.js";
+} from "../utils/token";
 
 type AvailabilityInput = {
   timeOptionId: number;
