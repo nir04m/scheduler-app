@@ -8,6 +8,7 @@
     "build": "tsc",
     "start": "node dist/src/server.js",
     "test": "NODE_OPTIONS='--experimental-vm-modules' jest --runInBand",
+    "typecheck": "tsc --noEmit",
     "test:watch": "jest --watch"
   },
   "keywords": [],
