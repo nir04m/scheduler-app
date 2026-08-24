@@ -7,7 +7,10 @@ import { apiLimiter } from './middleware/ratelimit.middleware';
 import pollRoutes from "./routes/poll.routes"
 
 const app = express();
+
 const PORT = process.env.PORT || 3000;
+
+app.set("trust proxy", 1);
 
 app.use(helmet());
 app.use(cors(corsOptions));
