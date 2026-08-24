@@ -1,0 +1,91 @@
+generator client {
+  provider               = "prisma-client"
+  output                 = "../generated/prisma"
+  moduleFormat           = "esm"
+  generatedFileExtension = "ts"
+  importFileExtension    = "ts"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum PollStatus {
+  OPEN
+  CLOSED
+  FINALIZED
+}
+
+enum AvailabilityStatus {
+  AVAILABLE
+  MAYBE
+  UNAVAILABLE
+}
+
+model Poll {
+  id                Int        @id @default(autoincrement())
+  publicId          String     @unique
+  organizerToken    String     @unique
+  title             String
+  description       String?
+  timezone          String
+  status            PollStatus @default(OPEN)
+  finalTimeOptionId Int?       @unique
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+
+  timeOptions     TimeOption[]  @relation("PollTimeOptions")
+  finalTimeOption TimeOption?   @relation("FinalTimeOption", fields: [finalTimeOptionId], references: [id], onDelete: SetNull)
+  participants    Participant[]
+}
+
+model TimeOption {
+  id        Int      @id @default(autoincrement())
+  pollId    Int
+  startTime DateTime
+  endTime   DateTime
+  createdAt DateTime @default(now())
+
+  poll           Poll           @relation("PollTimeOptions", fields: [pollId], references: [id], onDelete: Cascade)
+  finalizedFor   Poll?          @relation("FinalTimeOption")
+  availabilities Availability[]
+
+  @@index([pollId])
+}
+
+model Participant {
+  id     Int    @id @default(autoincrement())
+  pollId Int
+  name   String
+
+  // Temporary legacy token.
+  // Remove after existing participants are migrated.
+  responseToken String? @unique
+
+  // New secure participant token fields.
+  responseTokenId   String? @unique
+  responseTokenHash String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  poll           Poll           @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  availabilities Availability[]
+
+  @@index([pollId])
+}
+
+model Availability {
+  id            Int                @id @default(autoincrement())
+  participantId Int
+  timeOptionId  Int
+  status        AvailabilityStatus
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+
+  participant Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  timeOption  TimeOption  @relation(fields: [timeOptionId], references: [id], onDelete: Cascade)
+
+  @@unique([participantId, timeOptionId])
+  @@index([timeOptionId])
+}
