@@ -1,18 +1,24 @@
 /** @type {import("jest").Config} */
 module.exports = {
       testEnvironment: "node",
+    
       roots: ["<rootDir>/tests"],
+    
       testMatch: ["**/*.test.ts"],
     
-      extensionsToTreatAsEsm: [".ts"],
+      extensionsToTreatAsEsm: [".ts", ".mts"],
     
       transform: {
-        "^.+\\.ts$": [
+        "^.+\\.(ts|mts)$": [
           "babel-jest",
           {
             configFile: "./babel.config.cjs",
           },
         ],
+      },
+    
+      moduleNameMapper: {
+        "^(\\.{1,2}/.*)\\.mjs$": "$1.mts",
       },
     
       setupFiles: [
