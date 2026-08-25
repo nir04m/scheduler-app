@@ -34,7 +34,7 @@ export async function createParticipantResponseController(
 
     return res.status(201).json(participant);
   } catch (error) {
-    logError("Failed to create participant response");
+    logError("Failed to create participant response", error);
 
     if (error instanceof Error) {
       if (error.message === "POLL_NOT_FOUND") {
@@ -101,7 +101,7 @@ export async function updateParticipantResponseController(
   
       return res.status(200).json(participant);
     } catch (error) {
-     logError("Failed to update participant response");
+     logError("Failed to update participant response", error);
   
       if (error instanceof Error) {
         if (error.message === "PARTICIPANT_NOT_FOUND") {

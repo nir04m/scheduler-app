@@ -22,7 +22,7 @@ export async function createPollController(
 
         return res.status(201).json(poll);
     } catch (error) {
-        logError("Failed to create poll");
+        logError("Failed to create poll", error);
 
         res.status(500).json({
             message: "Failed to create poll",
@@ -46,7 +46,7 @@ export async function getPollController(
 
         res.status(200).json(poll);
     } catch (error) {
-        logError("Failed to get poll");
+        logError("Failed to get poll", error);
 
         res.status(500).json({
             message: "Failed to get poll",
@@ -96,7 +96,7 @@ export async function updatePollController(
             
             return res.status(200).json(poll);
         } catch (error) {
-            logError("Faile to update poll");
+            logError("Faile to update poll", error);
             
             if (error instanceof Error) {
                 if (error.message === "POLL_NOT_FOUND") {
@@ -166,7 +166,7 @@ export async function finalizePollController(
 
     return res.status(200).json(poll);
   } catch (error) {
-    logError("Failed to finalize poll");
+    logError("Failed to finalize poll", error);
 
     if (error instanceof Error) {
       if (error.message === "POLL_NOT_FOUND") {
