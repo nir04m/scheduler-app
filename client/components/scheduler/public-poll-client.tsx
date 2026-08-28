@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Award,
+  CheckCircle2,
   Clock,
   Globe,
   Users,
@@ -51,6 +52,7 @@ export default function PublicPollClient({
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [justSaved, setJustSaved] = useState(false);
 
   const loadPoll = useCallback(async () => {
     try {
@@ -69,17 +71,14 @@ export default function PublicPollClient({
   }, [publicId]);
 
   useEffect(() => {
-      const stored = localStorage.getItem(
-        responseStorageKey(publicId)
-      );
-    
-      queueMicrotask(() => {
-        if (stored) {
-          setResponseToken(stored);
-        }
-    
-        void loadPoll();
-      });
+    const stored = localStorage.getItem(
+      responseStorageKey(publicId)
+    );
+
+    queueMicrotask(() => {
+      if (stored) setResponseToken(stored);
+      void loadPoll();
+    });
   }, [loadPoll, publicId]);
 
   const allVoted = useMemo(
@@ -160,6 +159,7 @@ export default function PublicPollClient({
       }
 
       await loadPoll();
+      setJustSaved(true);
       setView("results");
     } catch (caught) {
       toast.error(
@@ -206,14 +206,17 @@ export default function PublicPollClient({
         <div className="flex rounded-xl bg-muted p-1">
           <button
             type="button"
-            onClick={() => setView("vote")}
+            onClick={() => {
+              setJustSaved(false);
+              setView("vote");
+            }}
             className={`rounded-lg px-3 py-1.5 text-xs font-medium ${
               view === "vote"
                 ? "bg-card text-foreground shadow-sm"
                 : "text-muted-foreground"
             }`}
           >
-            Vote
+            My availability
           </button>
           <button
             type="button"
@@ -224,7 +227,7 @@ export default function PublicPollClient({
                 : "text-muted-foreground"
             }`}
           >
-            Results
+            Group results
           </button>
         </div>
       </div>
@@ -232,6 +235,36 @@ export default function PublicPollClient({
       {poll.status === "CLOSED" && (
         <div className="mb-6 rounded-xl border border-border bg-muted/50 p-4 text-sm">
           Voting is closed. You can still view the responses below.
+        </div>
+      )}
+
+      {justSaved && view === "results" && (
+        <div className="mb-6 flex flex-col gap-3 rounded-xl border border-green-200 bg-green-50 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-3">
+            <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-green-100">
+              <CheckCircle2 size={16} className="text-green-700" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-green-900">
+                Availability saved
+              </p>
+              <p className="mt-0.5 text-xs text-green-700">
+                You are viewing the group results below. You can return to your availability while the poll is open.
+              </p>
+            </div>
+          </div>
+          {poll.status === "OPEN" && (
+            <button
+              type="button"
+              onClick={() => {
+                setJustSaved(false);
+                setView("vote");
+              }}
+              className="h-9 shrink-0 rounded-lg border border-green-300 bg-white px-3 text-xs font-medium text-green-900 hover:bg-green-100"
+            >
+              Update my availability
+            </button>
+          )}
         </div>
       )}
 
